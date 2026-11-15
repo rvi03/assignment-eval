@@ -8,3 +8,6 @@ __pycache__/
 
 # Local datasets
 .data/
+
+# Editor settings
+.idea/

@@ -79,7 +79,9 @@ class Reply:
 
 
 class JudgeClient(Protocol):
-    def complete(self, messages: list[dict], schema: dict) -> Reply: ...
+    def complete(
+        self, messages: list[dict], schema: dict, max_tokens: int | None = None
+    ) -> Reply: ...
 
 
 class OpenAIJudgeClient:
@@ -97,8 +99,13 @@ class OpenAIJudgeClient:
             max_retries=MAX_RETRIES,
         )
 
-    def complete(self, messages: list[dict], schema: dict) -> Reply:
+    def complete(
+        self, messages: list[dict], schema: dict, max_tokens: int | None = None
+    ) -> Reply:
+        """One structured-output request; `max_tokens` bounds the reply length."""
         options = {}
+        if max_tokens is not None:
+            options["max_tokens"] = max_tokens
         if self._settings.temperature is not None:
             options["temperature"] = self._settings.temperature
         try:

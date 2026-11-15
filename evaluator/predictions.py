@@ -14,7 +14,9 @@ The file is a JSON array with one object per case:
 - `status` is "ok" or "failed" and defaults to "ok" when it is absent.
 - A failed record has null labels; its `reason` says what went wrong, and
   `error_type` may name the kind of failure.
-- Other fields are ignored, so a file may carry extra diagnostics.
+- The judge's `assessment` and `format_check` are kept when present, so
+  the report can name the rule that decided each wrong prediction. Other
+  fields are ignored, so a file may carry extra diagnostics.
 
 Every problem in the file is collected and reported at once, so one run
 shows everything that needs fixing.
@@ -146,6 +148,8 @@ def _parse_record(index: int, record, problems: list[str]) -> Prediction | None:
         return None
 
     error_type = record.get("error_type")
+    assessment = record.get("assessment")
+    format_check = record.get("format_check")
     return Prediction(
         case_id=case_id,
         status=status,
@@ -154,4 +158,6 @@ def _parse_record(index: int, record, problems: list[str]) -> Prediction | None:
         policy_violation=policy if status == "ok" else None,
         reason=reason.strip(),
         error_type=error_type if isinstance(error_type, str) else None,
+        format_check=format_check if isinstance(format_check, bool) else None,
+        assessment=assessment if isinstance(assessment, dict) and status == "ok" else None,
     )
