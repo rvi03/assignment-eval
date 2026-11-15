@@ -1,4 +1,4 @@
-"""Command-line entry point. Subcommands are added by later sub-tasks."""
+"""Command-line entry point for the evaluator."""
 
 import argparse
 
