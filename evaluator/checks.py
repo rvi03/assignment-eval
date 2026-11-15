@@ -32,10 +32,15 @@ def check_json_format(case: CaseInput) -> bool | None:
     return True
 
 
+def tools_text(case: CaseInput) -> str:
+    """The tool list exactly as the judge sees it ("none" when empty)."""
+    return ", ".join(case.available_tools) if case.available_tools else "none"
+
+
 def source_text(case: CaseInput, source: str) -> str:
-    """The case text an evidence item may quote from."""
+    """The case text an evidence item may quote from, as the judge saw it."""
     if source == "available_tools":
-        return ", ".join(case.available_tools)
+        return tools_text(case)
     return getattr(case, source)
 
 

@@ -3,6 +3,9 @@
     case ─► format check ─► judge ─► reply checks ─► verdict table ─► quote check
                 (code)      (LLM)      (code)           (code)          (code)
 
+The quality score comes from a second fixed table over the same
+answers, so it can never contradict them.
+
 Every failure of the judge becomes a failed prediction with a clear
 error, never a verdict. Evaluator uncertainty is therefore never mixed
 up with ESCALATE, which means the case itself needs a human.
@@ -12,13 +15,12 @@ from evaluator.checks import check_json_format, find_unverified_quotes
 from evaluator.judge import ASSESSMENT_SCHEMA, InvalidAssessment, build_messages, parse_assessment
 from evaluator.llm import CallError, JudgeClient
 from evaluator.models import CaseInput, Prediction
-from evaluator.verdict import decide_verdict
+from evaluator.verdict import decide_quality, decide_verdict
 
 _REASK = (
     "Your reply did not follow the required schema: {error}. "
     "Reply again with only the JSON object, following the schema exactly."
 )
-
 
 def evaluate_case(case: CaseInput, client: JudgeClient) -> Prediction:
     format_check = check_json_format(case)
@@ -56,7 +58,7 @@ def evaluate_case(case: CaseInput, client: JudgeClient) -> Prediction:
         case_id=case.case_id,
         status="ok",
         verdict=verdict,
-        quality_score=assessment["quality_score"],
+        quality_score=decide_quality(assessment),
         policy_violation=policy_violation,
         reason=assessment["reason"].strip(),
         format_check=format_check,
