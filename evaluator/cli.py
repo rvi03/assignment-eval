@@ -254,6 +254,12 @@ def _run(args: argparse.Namespace) -> int:
     return 1 if summary.failed or skipped else 0
 
 
+def _saved_explanations(predictions: Path) -> Path | None:
+    """The explanations file run writes next to the predictions, if present."""
+    path = batch.explanations_path(predictions)
+    return path if path.exists() else None
+
+
 def _percent(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.1%}"
 
@@ -268,7 +274,7 @@ def _report(args: argparse.Namespace) -> int:
         predictions_path=args.predictions,
         split=args.split,
         explanations_path=args.explanations,
-        generated_path=args.generated_explanations,
+        generated_path=args.generated_explanations or _saved_explanations(args.predictions),
     )
     try:
         metrics = write_report(inputs, args.output)

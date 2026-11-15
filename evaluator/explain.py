@@ -117,7 +117,7 @@ def explain_with_model(client: JudgeClient, case: CaseInput, mismatch: Mismatch)
         return None
     if not text or len(text.split()) > MAX_EXPLANATION_WORDS:
         return None
-    return text
+    return text[0].upper() + text[1:]
 
 
 def generate_explanations(

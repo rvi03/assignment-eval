@@ -269,7 +269,7 @@ def _errors_section(m: Metrics, notes: Notes) -> str:
     if not m.mismatches:
         body = "<p class='muted'>Every scored prediction matches gold on verdict and policy.</p>"
     else:
-        body = "".join(_error_card(x, notes) for x in m.mismatches)
+        body = _error_tabs(m.mismatches, notes)
     shortfall = ""
     if 0 < len(m.mismatches) < MIN_ERROR_EXAMPLES:
         shortfall = (
@@ -280,8 +280,31 @@ def _errors_section(m: Metrics, notes: Notes) -> str:
 <h2>Error examples</h2>
 <p class="muted">{len(m.mismatches)} scored predictions differ from gold on verdict or policy. Verdict errors come first.</p>
 {shortfall}
-<div class="cards">{body}</div>
+{body}
 </section>"""
+
+
+def _error_tabs(mismatches: list[Mismatch], notes: Notes) -> str:
+    """One tab per wrong case; CSS radio buttons, so the page needs no script."""
+    radios, labels, panels, rules = [], [], [], []
+    for i, x in enumerate(mismatches):
+        checked = " checked" if i == 0 else ""
+        radios.append(
+            f'<input type="radio" name="error-tab" id="error-tab-{i}" class="tab-radio"{checked}>'
+        )
+        labels.append(f'<label for="error-tab-{i}">{escape(x.prediction.case_id)}</label>')
+        panels.append(f'<div class="tab-panel panel-{i}">{_error_card(x, notes)}</div>')
+        rules.append(
+            f"#error-tab-{i}:checked ~ .tab-panels .panel-{i} {{ display: block; }}\n"
+            f"#error-tab-{i}:checked ~ .tab-list label[for='error-tab-{i}'] "
+            "{ background: var(--surface); border-color: var(--accent); color: var(--fg); }"
+        )
+    return (
+        f"<style>{''.join(rules)}</style>"
+        f'<div class="tabs">{"".join(radios)}'
+        f'<div class="tab-list" role="tablist">{"".join(labels)}</div>'
+        f'<div class="tab-panels">{"".join(panels)}</div></div>'
+    )
 
 
 def _error_card(x: Mismatch, notes: Notes) -> str:
@@ -370,7 +393,6 @@ _PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="claude:viewport-fit-sides" content="cover">
 <title>Agent Evaluator Report</title>
 <style>{style}</style>
 </head>
@@ -457,6 +479,15 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .cm { min-width: 64px; font-weight: 650; border: 1px solid var(--line); }
 .cm.hit { color: var(--fg); }
 .cards { display: grid; gap: 16px; }
+.tabs { display: grid; gap: 12px; }
+.tab-radio { position: absolute; opacity: 0; pointer-events: none; }
+.tab-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab-list label {
+  font-family: var(--mono); font-size: 0.85rem; padding: 4px 12px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+}
+.tab-list label:hover { border-color: var(--accent); }
+.tab-panel { display: none; }
 .card {
   display: grid; gap: 12px; padding: 16px; background: var(--surface);
   border: 1px solid var(--line); border-radius: 6px; min-width: 0;

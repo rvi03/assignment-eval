@@ -116,7 +116,7 @@ evaluation.
 |---|---|---|
 | `validate` | Prints row counts and every row error; writes errors to `outputs/validation_errors.jsonl`. | Any row is invalid. |
 | `run` | Evaluates one split, writes the report, explains each wrong prediction and opens the report in a browser (terminal only). `--no-explain` and `--no-open` skip those steps. | Any prediction failed or any row is invalid. |
-| `report` | Scores saved predictions against the gold labels and writes the HTML report. | The predictions do not match the split. |
+| `report` | Scores saved predictions against the gold labels and writes the HTML report, reusing the saved error explanations. | The predictions do not match the split. |
 
 Run `python -m evaluator <command> --help` for all options.
 
@@ -284,6 +284,9 @@ brief asks for:
   reliable than a large hosted one.
 - A failed prediction has null labels, the one exception to the allowed
   output values.
+- The model-written "likely cause" can be wrong (in one test case it blamed
+  the wrong answer). The code-written "what decided it" next to it is
+  always exact.
 
 ## What I would improve next
 

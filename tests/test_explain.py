@@ -152,3 +152,23 @@ def test_no_explain_skips_the_model_but_still_writes_the_report(tmp_path, judge)
     assert client.requests == 1  # the judge call only
     assert not (tmp_path / "predictions.explanations.json").exists()
     assert "Predicted PASS by verdict row 5" in report.read_text(encoding="utf-8")
+
+
+def test_generated_sentence_starts_with_a_capital():
+    client = Client(Reply(content=json.dumps({"explanation": "evaluator missed the handoff."}), finish_reason="stop"))
+    assert explain_with_model(client, CASE, mismatch(labels())) == "Evaluator missed the handoff."
+
+
+def test_report_shows_errors_as_tabs_and_loads_saved_explanations(tmp_path, judge):
+    wrong = row("LB-1", gold_verdict="ESCALATE", gold_quality="3")
+    data = write_csv(tmp_path / "data.csv", [wrong, row("LB-2", gold_verdict="FAIL", gold_quality="1")])
+    output = tmp_path / "predictions.json"
+    judge(judge_reply(), judge_reply(), {"explanation": "first cause."}, {"explanation": "second cause."})
+    assert cli.main(["run", "--input", str(data), "--output", str(output), "--report", str(tmp_path / "r.html")]) == 0
+
+    rebuilt = tmp_path / "rebuilt.html"
+    assert cli.main(["report", "--input", str(data), "--predictions", str(output), "--output", str(rebuilt)]) == 0
+    html = rebuilt.read_text(encoding="utf-8")
+    assert html.count('class="tab-radio"') == 2 and "<label for=\"error-tab-1\">LB-2</label>" in html
+    assert "First cause." in html and "Second cause." in html
+    assert "<script" not in html and "claude:" not in html
