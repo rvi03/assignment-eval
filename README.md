@@ -97,12 +97,20 @@ The endpoint must support JSON-schema structured output.
 ## Usage
 
 ```bash
-python -m evaluator validate              # check all 48 rows
-python -m evaluator run --split test      # evaluate and report
-python -m evaluator report                # rebuild the report later
+python -m evaluator validate              # check the data only
+python -m evaluator run --split test      # evaluate with the judge model, then report
+python -m evaluator report                # re-score saved predictions, no model
 ```
 
-`validate`, `report` and the tests need no model or key.
+**Only `run` evaluates.** It sends every test case to the judge model, so
+it needs the [judge settings](#configure-the-judge-model) and takes about
+20–30 minutes with a local 8B model. `validate`, `report` and the tests
+never call a model and need no key.
+
+The repository already contains the submitted results in `outputs/`. Right
+after cloning, `report` rebuilds the report from those saved predictions
+without evaluating anything. Running `run` replaces them with a new
+evaluation.
 
 | Command | Does | Exits with 1 when |
 |---|---|---|
