@@ -66,7 +66,7 @@ class FakeClient:
         self.replies = list(replies)
         self.requests = []
 
-    def complete(self, messages, schema):
+    def complete(self, messages, schema, max_tokens=None):
         self.requests.append((messages, schema))
         reply = self.replies.pop(0)
         if isinstance(reply, Exception):
@@ -249,6 +249,8 @@ def test_unverified_quote_is_counted_but_does_not_change_the_verdict():
         ({k: v for k, v in answers().items() if k != "minor_flaw"}, "missing fields: minor_flaw"),
         (answers(quality_score=4), "unknown fields: quality_score"),
         (answers(reason=" "), "reason must be a non-empty string"),
+        (answers(reason="word " * 51), "reason must be at most 40 words"),
+        (answers(reason="The task_completed answer is yes."), "not name the answer fields"),
         (answers(evidence=[]), "evidence must be a non-empty list"),
         (answers(extra="x"), "unknown fields: extra"),
         ({k: v for k, v in answers().items() if k != "tools_ok"}, "missing fields: tools_ok"),

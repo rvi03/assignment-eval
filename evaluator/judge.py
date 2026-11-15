@@ -42,6 +42,9 @@ LABEL_FIELDS = {
     "agent_deferred": YES_NO,
 }
 EVIDENCE_FIELDS = ("question", "source", "quote", "note")
+# The prompt asks for at most 40 words; replies over this hard limit are
+# asked again once, so a slightly long reason is not a failure.
+MAX_REASON_WORDS = 50
 ASSESSMENT_FIELDS = (*LABEL_FIELDS, "evidence", "reason")
 
 _EVIDENCE_SCHEMA = {
@@ -152,10 +155,12 @@ separate, so check which one the quote comes from. When the evidence is an \
 absence, for example that no lookup tool was used, use source "none" with \
 an empty quote.
 
-reason: Write one or two complete sentences for a human reviewer. State the \
-fact from the case that decided the result, and include one short quote from \
-the case. Do not give the labels as the reason. A correct \
-handoff to a human is the right outcome, so do not describe it as a flaw.
+reason: Write one or two complete sentences for a human reviewer, and use at \
+most 40 words in total. State the fact from the case that decided the \
+result, and include one short quote from the case. Do not name the answer \
+fields, such as task_completed or needs_human, and do not repeat your answers \
+as the reason. A correct handoff to a human is the right outcome, so do not \
+describe it as a flaw.
 """
 
 
@@ -219,6 +224,16 @@ def parse_assessment(content: str) -> dict:
     reason = data["reason"]
     if not isinstance(reason, str) or not reason.strip():
         raise InvalidAssessment("reason must be a non-empty string")
+    words = len(reason.split())
+    if words > MAX_REASON_WORDS:
+        raise InvalidAssessment(
+            f"reason must be at most 40 words (two sentences), got {words} words"
+        )
+    named = [name for name in LABEL_FIELDS if name in reason]
+    if named:
+        raise InvalidAssessment(
+            f"reason must state facts from the case, not name the answer fields: {', '.join(named)}"
+        )
 
     evidence = data["evidence"]
     if not isinstance(evidence, list) or not evidence:
