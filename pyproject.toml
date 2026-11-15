@@ -3,7 +3,9 @@ name = "evaluator"
 version = "0.1.0"
 description = "Evaluates AI agent responses for task completion, constraint compliance and tool use."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "openai>=3.51.0",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]

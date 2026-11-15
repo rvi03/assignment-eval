@@ -103,5 +103,27 @@ class LoadResult:
     errors: list[RowError] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class Prediction:
+    """The evaluator's result for one case.
+
+    A successful prediction has status "ok" and all four labels. A failed
+    one has status "failed", no labels, the error in `reason` and its kind
+    in `error_type`; it is counted as failed instead of being given a
+    verdict nobody decided.
+    """
+
+    case_id: str
+    status: str
+    verdict: str | None
+    quality_score: int | None
+    policy_violation: bool | None
+    reason: str
+    error_type: str | None = None
+    format_check: bool | None = None
+    unverified_quotes: int = 0
+    assessment: dict | None = None
+
+
 class DataFileError(Exception):
     """The file as a whole cannot be read, so no row can be trusted."""
