@@ -1,4 +1,4 @@
-it# AI Agent Response Evaluator
+# AI Agent Response Evaluator
 
 A command-line tool that checks the work of an AI agent. For each case it
 decides whether the agent completed the task, kept to its constraints and
