@@ -1,0 +1,26 @@
+{
+  "split": "test",
+  "input": {
+    "path": ".data/ai_agent_evaluator_benchmark.csv",
+    "sha256": "d70fb661aae58bc99216ce0fffccbfcd4f8ba5e3e2ecc4498109138fb717406d"
+  },
+  "settings": {
+    "model": "qwen3:8b",
+    "base_url": "http://localhost:11434/v1",
+    "temperature": 0.0,
+    "timeout": 600.0,
+    "max_retries": 2
+  },
+  "prompt_fingerprint": "ab36b763719a",
+  "started_at": "2026-11-15T10:59:36Z",
+  "finished_at": "2026-11-15T11:17:22Z",
+  "seconds": 1065.4,
+  "counts": {
+    "total": 36,
+    "ok": 36,
+    "failed": 0,
+    "failed_by_type": {},
+    "unverified_quotes": 3
+  },
+  "python": "3.12.16"
+}
