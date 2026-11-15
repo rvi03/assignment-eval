@@ -104,7 +104,7 @@ python -m evaluator report                # re-score saved predictions, no model
 
 **Only `run` evaluates.** It sends every test case to the judge model, so
 it needs the [judge settings](#configure-the-judge-model) and takes about
-20–30 minutes with a local 8B model. `validate`, `report` and the tests
+30–60 minutes with a local 8B model, depending on the machine. `validate`, `report` and the tests
 never call a model and need no key.
 
 The repository already contains the submitted results in `outputs/`. Right
@@ -225,10 +225,11 @@ details are in `outputs/report.html`.
   task failure instead of a policy breach.
 - The one verdict error is a correct partial result (the agent stopped as
   instructed), which the table can only score as `FAIL`.
-- **This is the second test run.** The first run (88.9% accuracy, policy
-  recall 0.45) came before the reason-length rule was added. Only that
-  rule changed, but the second run follows a look at the first run's
-  errors, so the test split is no longer fully unseen.
+- **This is not the first test run.** The first run (88.9% accuracy,
+  policy recall 0.45) came before the reason-length rule was added. Only
+  that rule changed, but the later runs follow a look at the first run's
+  errors, so the test split is no longer fully unseen. A run from a fresh
+  clone with the same prompt reproduced the same 36 predictions.
 
 ## Testing
 

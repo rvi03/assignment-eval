@@ -171,4 +171,4 @@ def test_report_shows_errors_as_tabs_and_loads_saved_explanations(tmp_path, judg
     html = rebuilt.read_text(encoding="utf-8")
     assert html.count('class="tab-radio"') == 2 and "<label for=\"error-tab-1\">LB-2</label>" in html
     assert "First cause." in html and "Second cause." in html
-    assert "<script" not in html and "claude:" not in html
+    assert "<script" not in html and html.count("<meta ") == 2  # charset and viewport only
