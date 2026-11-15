@@ -177,6 +177,7 @@ def test_report_writes_html_with_metrics(tmp_path, data_csv, capsys):
     assert "50.0%" in html  # verdict accuracy, 1 of 2 scored
     assert "33.3%" in html  # strict accuracy, 1 of 3
     assert "Failed records" in html and "timeout" in html
+    assert "Predicted count" in html  # verdict distribution next to the gold counts
     # Text from the data and the notes is escaped, never injected as markup.
     assert "Missed the &lt;email&gt; rule." in html
     assert "&lt;with markup&gt;" in html

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from html import escape
 from pathlib import Path
 
+from evaluator.explain import code_explanation
 from evaluator.loader import load_cases
 from evaluator.metrics import Metrics, Mismatch, compute_metrics
 from evaluator.models import VERDICTS, Prediction
@@ -28,6 +29,16 @@ class ReportInputs:
     predictions_path: Path
     split: str
     explanations_path: Path | None = None
+    generated_path: Path | None = None
+
+
+@dataclass(frozen=True)
+class Notes:
+    """Text shown with the error examples, besides the code's own facts."""
+
+    analyst: dict[str, str]
+    generated: dict[str, str]
+    generator: str | None = None
 
 
 def build_report(inputs: ReportInputs) -> tuple[Metrics, str]:
@@ -50,8 +61,13 @@ def build_report(inputs: ReportInputs) -> tuple[Metrics, str]:
     )
     gold = {c.input.case_id: c.labels for c in cases}
     metrics = compute_metrics(predictions, gold)
-    explanations = _read_explanations(inputs.explanations_path, metrics)
-    return metrics, render_html(metrics, inputs, explanations)
+    generated, generator = _read_generated(inputs.generated_path, metrics)
+    notes = Notes(
+        analyst=_read_explanations(inputs.explanations_path, metrics),
+        generated=generated,
+        generator=generator,
+    )
+    return metrics, render_html(metrics, inputs, notes)
 
 
 def write_report(inputs: ReportInputs, output: Path | str) -> Metrics:
@@ -89,18 +105,39 @@ def _read_explanations(path: Path | None, metrics: Metrics) -> dict[str, str]:
     return {k: v.strip() for k, v in data.items()}
 
 
+def _read_generated(path: Path | None, metrics: Metrics) -> tuple[dict[str, str], str | None]:
+    """Read model-written explanations: {"generator": ..., "explanations": {...}}."""
+    if path is None:
+        return {}, None
+    if not path.exists():
+        raise ReportError(f"Generated explanations file not found: {path}.")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReportError(f"Cannot read generated explanations file {path}: {exc}") from exc
+    notes = data.get("explanations") if isinstance(data, dict) else None
+    generator = data.get("generator") if isinstance(data, dict) else None
+    if not isinstance(notes, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in notes.items()
+    ) or not isinstance(generator, str):
+        raise ReportError(
+            f"Generated explanations file {path} must hold a generator name and "
+            "an object of case_id to text."
+        )
+    known = {m.prediction.case_id for m in metrics.mismatches}
+    return {k: v.strip() for k, v in notes.items() if k in known}, generator
+
+
 # --- Rendering -------------------------------------------------------------
 
 
-def render_html(
-    metrics: Metrics, inputs: ReportInputs, explanations: dict[str, str]
-) -> str:
+def render_html(metrics: Metrics, inputs: ReportInputs, notes: Notes) -> str:
     sections = [
         _summary(metrics),
         _verdict_section(metrics),
         _policy_section(metrics),
         _quality_section(metrics),
-        _errors_section(metrics, explanations),
+        _errors_section(metrics, notes),
         _failures_section(metrics),
         _notes_section(),
     ]
@@ -151,15 +188,18 @@ def _verdict_section(m: Metrics) -> str:
             cells.append(f'<td class="cm {kind}"{style}>{count}</td>')
         rows.append(f"<tr><th scope='row'>{gold}</th>{''.join(cells)}</tr>")
 
+    predicted = {v: sum(row[j] for row in m.confusion) for j, v in enumerate(VERDICTS)}
     class_rows = "".join(
         f"<tr><th scope='row'>{v}</th><td>{_num(s.precision)}</td>"
-        f"<td>{_num(s.recall)}</td><td>{_num(s.f1)}</td><td>{s.support}</td></tr>"
+        f"<td>{_num(s.recall)}</td><td>{_num(s.f1)}</td><td>{s.support}</td>"
+        f"<td>{predicted.get(v, 0)}</td></tr>"
         for v, s in m.per_class.items()
     )
     per_class = (
         f"""<div class="scroll"><table class="data">
 <thead><tr><th scope="col">Class</th><th scope="col">Precision</th>
-<th scope="col">Recall</th><th scope="col">F1</th><th scope="col">Gold count</th></tr></thead>
+<th scope="col">Recall</th><th scope="col">F1</th><th scope="col">Gold count</th>
+<th scope="col">Predicted count</th></tr></thead>
 <tbody>{class_rows}</tbody></table></div>"""
         if class_rows
         else "<p class='muted'>No successful predictions to score.</p>"
@@ -180,7 +220,7 @@ def _verdict_section(m: Metrics) -> str:
     </table></div>
   </figure>
   <figure>
-    <figcaption>Per-class scores</figcaption>
+    <figcaption>Per-class scores and verdict distribution</figcaption>
     {per_class}
   </figure>
 </div>
@@ -225,11 +265,11 @@ def _quality_section(m: Metrics) -> str:
 </section>"""
 
 
-def _errors_section(m: Metrics, explanations: dict[str, str]) -> str:
+def _errors_section(m: Metrics, notes: Notes) -> str:
     if not m.mismatches:
         body = "<p class='muted'>Every scored prediction matches gold on verdict and policy.</p>"
     else:
-        body = "".join(_error_card(x, explanations.get(x.prediction.case_id)) for x in m.mismatches)
+        body = "".join(_error_card(x, notes) for x in m.mismatches)
     shortfall = ""
     if 0 < len(m.mismatches) < MIN_ERROR_EXAMPLES:
         shortfall = (
@@ -244,7 +284,7 @@ def _errors_section(m: Metrics, explanations: dict[str, str]) -> str:
 </section>"""
 
 
-def _error_card(x: Mismatch, explanation: str | None) -> str:
+def _error_card(x: Mismatch, notes: Notes) -> str:
     p, g = x.prediction, x.gold
     tags = []
     if x.verdict_wrong:
@@ -253,11 +293,17 @@ def _error_card(x: Mismatch, explanation: str | None) -> str:
         tags.append('<span class="tag bad">policy</span>')
     if p.quality_score != g.quality:
         tags.append(f'<span class="tag">quality off by {abs(p.quality_score - g.quality)}</span>')
-    analysis = (
-        f"<p>{escape(explanation)}</p>"
-        if explanation
-        else "<p class='muted'>Not analysed yet.</p>"
-    )
+    why = [f"<div><dt>What decided it</dt><dd>{escape(code_explanation(x))}</dd></div>"]
+    generated = notes.generated.get(p.case_id)
+    if generated:
+        source = escape(notes.generator or "the judge model")
+        why.append(
+            f"<div><dt>Likely cause <span class='muted'>(generated by {source})</span></dt>"
+            f"<dd>{escape(generated)}</dd></div>"
+        )
+    analyst = notes.analyst.get(p.case_id)
+    if analyst:
+        why.append(f"<div><dt>Analyst note</dt><dd>{escape(analyst)}</dd></div>")
     trap = f"<div><dt>Trap</dt><dd>{escape(g.trap)}</dd></div>" if g.trap else ""
     return f"""<article class="card">
 <header><h3>{escape(p.case_id)}</h3><div class="tags">{''.join(tags)}</div></header>
@@ -272,7 +318,7 @@ def _error_card(x: Mismatch, explanation: str | None) -> str:
   <div><dt>Evaluator's reason</dt><dd>{escape(p.reason)}</dd></div>
   <div><dt>Gold rationale</dt><dd>{escape(g.rationale)}</dd></div>
   {trap}
-  <div><dt>Why it went wrong</dt><dd>{analysis}</dd></div>
+  {''.join(why)}
 </dl>
 </article>"""
 
