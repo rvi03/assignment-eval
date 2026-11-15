@@ -1,0 +1,7 @@
+# Local virtual environment
+.venv/
+
+# Generated caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
