@@ -1,5 +1,5 @@
 [project]
-name = "evaluator"
+name = "assignment-eval"
 version = "0.1.0"
 description = "Evaluates AI agent responses for task completion, constraint compliance and tool use."
 requires-python = ">=3.12"

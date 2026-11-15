@@ -44,8 +44,8 @@ How to read it:
 ### Install
 
 ```bash
-git clone <repository-url>
-cd <repository-directory>
+git clone https://github.com/rvi03/assignment-eval.git
+cd assignment-eval
 make install
 ```
 
