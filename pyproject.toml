@@ -5,6 +5,7 @@ description = "Evaluates AI agent responses for task completion, constraint comp
 requires-python = ">=3.12"
 dependencies = [
     "openai>=3.51.0",
+    "scikit-learn>=1.9.1",
 ]
 
 [dependency-groups]
